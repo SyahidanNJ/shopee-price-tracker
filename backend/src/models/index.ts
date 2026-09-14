@@ -3,6 +3,7 @@ import { RefreshToken } from './refreshToken';
 import { Product, PriceSnapshot } from './products';
 import { Alert } from './alert';
 import { PriceCheckLog } from './priceCheckLog';
+import { NotificationLog } from './notificationLog';
 
 export const models = {
   User,
@@ -10,7 +11,8 @@ export const models = {
   Product,
   PriceSnapshot,
   Alert,
-  PriceCheckLog
+  PriceCheckLog,
+  NotificationLog
 };
 
-export { User, RefreshToken, Product, PriceSnapshot, Alert, PriceCheckLog };
+export { User, RefreshToken, Product, PriceSnapshot, Alert, PriceCheckLog, NotificationLog };
