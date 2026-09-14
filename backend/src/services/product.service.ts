@@ -1,5 +1,7 @@
 import { productRepository } from '../repositories/productRepository';
 import { priceSnapshotRepository } from '../repositories/priceSnapshotRepository';
+import { priceChecker } from './price-checker/priceChecker';
+import { updateProductRepository } from '../repositories/productRepository';
 
 export const normalizeShopeeUrl = (url: string): string => {
   try {
@@ -59,10 +61,26 @@ export const productService = {
       status: 'active'
     });
 
-    await priceSnapshotRepository.create({
-      productId: product.id,
-      price: null,
-      created_at: new Date()
+    const result = await priceChecker.check(product.id, data.sourceUrl);
+    
+    let status = 'active';
+    let name = 'Loading...';
+    let currentPrice = null;
+
+    if (result.success && result.data) {
+      name = result.data.name || 'Unknown Product';
+      currentPrice = result.data.price;
+      if (result.data.stockStatus === 'out_of_stock') {
+        status = 'out_of_stock';
+      }
+    } else {
+      status = 'error';
+    }
+
+    await updateProductRepository(product.id, {
+      name,
+      currentPrice,
+      status
     });
 
     return product;
@@ -85,7 +103,7 @@ export const productService = {
     if (!product) {
       throw new Error('Product not found');
     }
-    await productRepository.update(id, data);
+    await updateProductRepository(id, data);
     return productRepository.findById(id);
   },
 
@@ -96,3 +114,4 @@ export const productService = {
     }
   }
 };
+
