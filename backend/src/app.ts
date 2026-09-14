@@ -7,6 +7,7 @@ import { testConnection } from './config/database';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import { apiRoutes } from '../routes/api';
+import telegramWebhook from './integrations/telegram/webhook';
 import pino from 'pino';
 
 const logger = pino();
@@ -56,6 +57,9 @@ app.get('/health', async (req, res) => {
 
 // API routes
 app.use('/api', apiRoutes);
+
+// Telegram webhook (no auth, no prefix)
+app.post('/webhook/telegram', telegramWebhook);
 
 // Error handlers
 app.use(notFound);

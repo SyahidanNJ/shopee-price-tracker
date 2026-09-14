@@ -1,5 +1,6 @@
 import { app, config } from './app';
 import { initializeScheduler } from './jobs';
+import { initializeTelegram } from './integrations/telegram';
 
 const start = async () => {
   try {
@@ -9,6 +10,7 @@ const start = async () => {
 
     if (config.env === 'development') {
       await initializeScheduler();
+      initializeTelegram();
     }
   } catch (error) {
     console.error('Failed to start server:', error);

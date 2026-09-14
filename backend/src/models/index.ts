@@ -4,6 +4,7 @@ import { Product, PriceSnapshot } from './products';
 import { Alert } from './alert';
 import { PriceCheckLog } from './priceCheckLog';
 import { NotificationLog } from './notificationLog';
+import { TelegramBinding } from './telegramBinding';
 
 export const models = {
   User,
@@ -12,7 +13,8 @@ export const models = {
   PriceSnapshot,
   Alert,
   PriceCheckLog,
-  NotificationLog
+  NotificationLog,
+  TelegramBinding
 };
 
-export { User, RefreshToken, Product, PriceSnapshot, Alert, PriceCheckLog, NotificationLog };
+export { User, RefreshToken, Product, PriceSnapshot, Alert, PriceCheckLog, NotificationLog, TelegramBinding };
