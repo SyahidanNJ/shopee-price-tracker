@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { config } from './config';
+import { testConnection } from './config/database';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import { apiRoutes } from '../routes/api';
@@ -32,14 +33,25 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Health check (outside API prefix)
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    database: config.databaseUrl ? 'connected' : 'not_configured',
-    telegram: config.telegramBotToken ? 'configured' : 'not_configured',
-    scheduler: 'not_started',
-    timestamp: new Date().toISOString()
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const dbConnected = await testConnection();
+    res.json({
+      status: 'ok',
+      database: dbConnected ? 'connected' : 'not_connected',
+      telegram: config.telegramBotToken ? 'configured' : 'not_configured',
+      scheduler: 'not_started',
+      timestamp: new Date().toISOString()
+    });
+  } catch {
+    res.json({
+      status: 'ok',
+      database: 'not_connected',
+      telegram: config.telegramBotToken ? 'configured' : 'not_configured',
+      scheduler: 'not_started',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // API routes
