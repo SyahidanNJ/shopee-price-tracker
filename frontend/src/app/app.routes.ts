@@ -7,5 +7,6 @@ export const routes: Routes = [
   { path: 'home', loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent) },
   { path: 'login', canActivate: [GuestGuard], loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent) },
   { path: 'register', canActivate: [GuestGuard], loadComponent: () => import('./features/register/register.component').then(m => m.RegisterComponent) },
-  { path: 'dashboard', canActivate: [AuthGuard], loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) }
+  { path: 'dashboard', canActivate: [AuthGuard], loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+  { path: 'product/:id', canActivate: [AuthGuard], loadComponent: () => import('./features/product-detail/product-detail.component').then(m => m.ProductDetailComponent) }
 ];
