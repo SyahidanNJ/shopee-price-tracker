@@ -4,13 +4,37 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: shopee_tracker
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: shopee_price_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      DATABASE_URL: postgres://postgres:postgres@db:5432/shopee_price_tracker
+      JWT_ACCESS_SECRET: your-access-secret-key
+      JWT_REFRESH_SECRET: your-refresh-secret-key
+      CLIENT_URL: http://localhost:4200
+      PRICE_CHECK_INTERVAL_MINUTES: 30
+      PRICE_CHECK_TIMEOUT_MS: 15000
+      PRICE_CHECK_DELAY_MS: 3000
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

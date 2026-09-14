@@ -33,7 +33,12 @@ Response: `201 Created` with user data
 Response: `200 OK` with access_token, refresh_token, user
 
 ### POST /api/auth/refresh
-Request: Cookie with refresh_token
+Request: JSON with refreshToken
+```json
+{
+  "refreshToken": "..."
+}
+```
 Response: `200 OK` with new access_token, refresh_token
 
 ### POST /api/auth/logout
