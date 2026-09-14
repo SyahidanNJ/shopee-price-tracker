@@ -1,9 +1,12 @@
 import { User } from './user';
 import { RefreshToken } from './refreshToken';
+import { Product, PriceSnapshot } from './products';
 
 export const models = {
   User,
-  RefreshToken
+  RefreshToken,
+  Product,
+  PriceSnapshot
 };
 
-export { User, RefreshToken };
+export { User, RefreshToken, Product, PriceSnapshot };
