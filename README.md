@@ -1,28 +1,52 @@
 # Shopee Price Tracker
 
-A monorepo application for tracking Shopee product prices.
+A monorepo application for tracking Shopee product prices with Telegram notifications.
 
 ## Project Structure
 
 ```
 shopee-price-tracker/
-├── backend/          # Backend API service
-├── frontend/         # Frontend web application
-├── docs/             # Project documentation
+├── backend/          # Express.js API
+├── frontend/         # Angular application
+├── docs/             # Documentation
 ├── docker-compose.yml
 ├── .gitignore
 └── README.md
 ```
 
-## Getting Started
+## Quick Start
 
-See the README files in each subdirectory for specific setup instructions.
+### Backend
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+```
 
-## Development
+### Frontend
+```bash
+cd frontend
+npm install
+ng serve
+```
 
-- **Backend**: See `backend/README.md`
-- **Frontend**: See `frontend/README.md`
+### Database (Docker)
+```bash
+docker-compose up -d
+```
+
+## Tech Stack
+- **Frontend**: Angular, Tailwind CSS
+- **Backend**: Express.js, TypeScript, Sequelize
+- **Database**: PostgreSQL
+- **External**: Telegram Bot, Shopee API
+
+## Documentation
+- [PRD](docs/PRD.md)
+- [Architecture](docs/architecture.md)
+- [API Contract](docs/api-contract.md)
+- [Database Schema](docs/database-schema.md)
 
 ## License
-
 MIT

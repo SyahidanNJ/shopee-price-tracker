@@ -19,3 +19,10 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/

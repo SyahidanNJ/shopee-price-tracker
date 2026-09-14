@@ -3,13 +3,21 @@
 Frontend web application for Shopee Price Tracker.
 
 ## Tech Stack
-- React
+- Angular 17+
 - TypeScript
-- TailwindCSS
+- Tailwind CSS
+- Reactive Forms
 
 ## Setup
 1. `npm install`
-2. `npm start`
+2. `ng serve`
+3. Open http://localhost:4200
 
 ## Build
-`npm run build`
+`ng build --prod`
+
+## Environment Configuration
+- `src/environments/environment.ts` - Development
+- `src/environments/environment.prod.ts` - Production
+
+Set `apiUrl` to point to backend API.
