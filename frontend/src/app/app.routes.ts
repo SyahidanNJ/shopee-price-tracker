@@ -8,5 +8,6 @@ export const routes: Routes = [
   { path: 'login', canActivate: [GuestGuard], loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent) },
   { path: 'register', canActivate: [GuestGuard], loadComponent: () => import('./features/register/register.component').then(m => m.RegisterComponent) },
   { path: 'dashboard', canActivate: [AuthGuard], loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
-  { path: 'product/:id', canActivate: [AuthGuard], loadComponent: () => import('./features/product-detail/product-detail.component').then(m => m.ProductDetailComponent) }
+  { path: 'product/:id', canActivate: [AuthGuard], loadComponent: () => import('./features/product-detail/product-detail.component').then(m => m.ProductDetailComponent) },
+  { path: 'telegram', canActivate: [AuthGuard], loadComponent: () => import('./features/telegram-settings/telegram-settings.component').then(m => m.TelegramSettingsComponent) }
 ];

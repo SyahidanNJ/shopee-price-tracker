@@ -13,9 +13,12 @@ import { AddProductModalComponent } from './add-product-modal.component';
     <div class="container">
       <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <h2>My Products</h2>
-        <button class="btn btn-primary" (click)="showAddModal = true">
-          + Add Product
-        </button>
+        <div style="display: flex; gap: 8px;">
+          <a routerLink="/telegram" class="btn btn-secondary">Telegram</a>
+          <button class="btn btn-primary" (click)="showAddModal = true">
+            + Add Product
+          </button>
+        </div>
       </div>
 
       @if (loading) {
