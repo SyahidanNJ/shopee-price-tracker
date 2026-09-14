@@ -1,28 +1,28 @@
 import { Response } from 'express';
+import { TelegramBinding } from '../models/telegramBinding';
+import { NotificationLog } from '../models/notificationLog';
+import { User } from '../models/user';
 import { config } from '../config';
-import { userRepository } from '../repositories/userRepository';
-import { NotificationLogRepository } from '../repositories/notificationLogRepository';
 
 export interface NotificationJob {
-  send: (userId: string, productId: string, alert: any, oldPrice: number, newPrice: number) => Promise<void>;
+  send: (userId: string, productId: string, productName: string, oldPrice: number, newPrice: number) => Promise<void>;
 }
 
 export class ShopeeNotificationJob implements NotificationJob {
   async send(
     userId: string,
     productId: string,
-    alert: any,
+    productName: string,
     oldPrice: number,
     newPrice: number
   ): Promise<void> {
     try {
-      const user = await userRepository.findById(userId);
+      const user = await User.findByPk(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      const telegramBinding = require('../models').TelegramBinding;
-      const binding = await telegramBinding.findOne({
+      const binding = await TelegramBinding.findOne({
         where: { userId, isActive: true }
       });
 
@@ -33,51 +33,45 @@ export class ShopeeNotificationJob implements NotificationJob {
       const drop = oldPrice - newPrice;
       const dropPercentage = ((oldPrice - newPrice) / oldPrice) * 100;
 
-      let message = '';
-      if (alert.alertType === 'any_drop') {
-        message = `
-Price Drop Alert!
+      const message = `
+💰 Price Drop Alert!
 
-Product ID: ${productId}
-Old Price: Rp ${oldPrice.toLocaleString()}
-New Price: Rp ${newPrice.toLocaleString()}
-Drop: Rp ${drop.toLocaleString()} (${dropPercentage.toFixed(2)}%)
+📦 Product: ${productName}
+📉 Old Price: Rp ${oldPrice.toLocaleString()}
+📊 New Price: Rp ${newPrice.toLocaleString()}
+💵 Drop: Rp ${drop.toLocaleString()} (${dropPercentage.toFixed(2)}%)
+
+Cek produk: https://shopee.co.id/i/${productId}
 `;
-      } else if (alert.alertType === 'target_price') {
-        message = `
-Target Price Reached!
 
-Product ID: ${productId}
-Target Price: Rp ${(alert.targetPrice || 0).toLocaleString()}
-Current Price: Rp ${newPrice.toLocaleString()}
-`;
-      }
+      const { Bot } = require('grammy');
+      const bot = new Bot(config.telegramBotToken!);
+      await bot.api.sendMessage(binding.telegramUserId, message);
 
-      await notificationService.sendTelegramMessage(binding.telegramUserId, message);
-
-      await NotificationLogRepository.create({
+      await NotificationLog.create({
         userId,
         productId,
-        alertId: alert.id,
         channel: 'telegram',
         status: 'sent'
       });
 
     } catch (error: any) {
-      logger.error({
+      await NotificationLog.create({
         userId,
         productId,
-        message: error.message
-      }, 'Notification failed');
-
-      await NotificationLogRepository.create({
-        userId,
-        productId,
-        alertId: alert.id,
         channel: 'telegram',
         status: 'failed',
         errorMessage: error.message
       });
+
+      if (error.description === 'Bad Request: bot was blocked by the user') {
+        await TelegramBinding.update(
+          { isActive: false },
+          { where: { userId } }
+        );
+      }
+
+      throw error;
     }
   }
 }

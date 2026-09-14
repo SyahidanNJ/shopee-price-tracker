@@ -1,26 +1,7 @@
-import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/database';
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-export class Product extends Model {
-  public id!: string;
-  public userId!: string;
-  public name!: string;
-  public sourceUrl!: string;
-  public normalizedUrl!: string;
-  public shopeeItemId!: string | null;
-  public shopeeShopId!: string | null;
-  public imageUrl!: string | null;
-  public currentPrice!: number | null;
-  public currency!: string;
-  public status!: string;
-  public lastCheckedAt!: Date | null;
-  public lastNotifiedPrice!: number | null;
-  public lastNotifiedAt!: Date | null;
-}
-
-const statuses = ['active', 'paused', 'error', 'not_found', 'out_of_stock'];
-
-Product.init({
+const Product = sequelize.define('Product', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -86,3 +67,5 @@ Product.init({
     { fields: ['status'] }
   ]
 });
+
+module.exports = Product;

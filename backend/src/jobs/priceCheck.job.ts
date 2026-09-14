@@ -1,6 +1,6 @@
 import pino from 'pino';
 import { config } from '../config';
-import { productRepository } from '../repositories/productRepository';
+import { Product } from '../models/product';
 import { priceChecker } from '../services/price-checker/priceChecker';
 import { alertRepository } from '../repositories/alertRepository';
 import { priceSnapshotRepository } from '../repositories/priceSnapshotRepository';
@@ -12,19 +12,11 @@ export interface CheckResult {
   success: boolean;
   oldPrice: number | null;
   newPrice: number | null;
-  alert: any | null;
   shouldNotify: boolean;
 }
 
 export const priceCheckJob = {
   run: async () => {
-    const products = await productRepository.findByUserId(
-      // Get all products with status active
-      ''
-    ) as any[];
-
-    // Query active products directly
-    const { Product } = require('../models');
     const activeProducts = await Product.findAll({
       where: { status: 'active' }
     });
@@ -41,7 +33,6 @@ export const priceCheckJob = {
     for (let i = 0; i < activeProducts.length; i++) {
       const product = activeProducts[i];
       
-      // Delay between products
       if (i > 0) {
         await new Promise(resolve => setTimeout(resolve, config.priceCheckDelayMs));
       }
@@ -55,21 +46,13 @@ export const priceCheckJob = {
         const result = await priceChecker.check(product.id, product.normalizedUrl);
 
         const newPrice = result.success && result.data ? result.data.price : null;
-        const alert = await alertRepository.findByProductId(product.id);
-
-        // Check if notification should be sent
-        const shouldNotify = checkAlertConditions(
-          oldPrice,
-          newPrice,
-          alert
-        );
+        const shouldNotify = await shouldSendNotification(product, oldPrice, newPrice);
 
         results.push({
           productId: product.id,
           success: result.success,
           oldPrice,
           newPrice,
-          alert,
           shouldNotify
         });
 
@@ -92,30 +75,68 @@ export const priceCheckJob = {
   }
 };
 
-function checkAlertConditions(
+async function shouldSendNotification(
+  product: Product,
   oldPrice: number | null,
-  newPrice: number | null,
-  alert: any | null
-): boolean {
-  if (!alert || !alert.isActive) {
-    return false;
-  }
-
+  newPrice: number | null
+): Promise<boolean> {
+  // Check 1: Must have valid new price
   if (!newPrice || oldPrice === null) {
     return false;
   }
 
+  // Check 2: Price must be lower (never notify on price increase)
   if (newPrice >= oldPrice) {
     return false;
   }
 
-  const shouldNotify = alert.alertType === 'any_drop' ||
-    (alert.alertType === 'target_price' && newPrice <= (alert.targetPrice || 0)) ||
-    (alert.alertType === 'min_drop_percentage' && calculateDropPercentage(oldPrice, newPrice) >= (alert.minDropPercentage || 0));
+  // Check 3: Cooldown check
+  if (product.lastNotifiedAt) {
+    const cooldownMinutes = config.priceCheckIntervalMinutes || 30;
+    const minutesSinceLast = (Date.now() - product.lastNotifiedAt.getTime()) / 60000;
+    if (minutesSinceLast < cooldownMinutes) {
+      return false;
+    }
+  }
 
-  return shouldNotify;
+  // Check 4: Duplicate prevention (same price as last notified)
+  if (product.lastNotifiedPrice === newPrice) {
+    return false;
+  }
+
+  // Check 5: Alert type conditions
+  const alert = await alertRepository.findByProductId(product.id);
+  if (!alert || !alert.isActive) {
+    return false;
+  }
+
+  const dropPercentage = ((oldPrice - newPrice) / oldPrice) * 100;
+
+  if (alert.alertType === 'any_drop') {
+    return true;
+  }
+
+  if (alert.alertType === 'target_price' && newPrice <= (alert.targetPrice || 0)) {
+    return true;
+  }
+
+  if (alert.alertType === 'min_drop_percentage' && dropPercentage >= (alert.minDropPercentage || 0)) {
+    return true;
+  }
+
+  return false;
 }
 
-function calculateDropPercentage(oldPrice: number, newPrice: number): number {
-  return ((oldPrice - newPrice) / oldPrice) * 100;
+async function updateProductNotified(product: Product, newPrice: number) {
+  await Product.update(
+    {
+      lastNotifiedPrice: newPrice,
+      lastNotifiedAt: new Date()
+    },
+    {
+      where: { id: product.id }
+    }
+  );
 }
+
+export { shouldSendNotification, updateProductNotified };
