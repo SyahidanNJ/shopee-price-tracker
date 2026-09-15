@@ -2,11 +2,11 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class PriceCheckLog extends Model {
-  public id!: string;
-  public productId!: string;
-  public status!: string;
-  public errorMessage!: string | null;
-  public durationMs!: number | null;
+  declare id: string;
+  declare productId: string;
+  declare status: string;
+  declare errorMessage: string | null;
+  declare durationMs: number | null;
 }
 
 PriceCheckLog.init({
@@ -34,6 +34,9 @@ PriceCheckLog.init({
 }, {
   sequelize,
   modelName: 'PriceCheckLog',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: false,
   indexes: [
     { fields: ['productId'] },
     { fields: ['created_at'] }

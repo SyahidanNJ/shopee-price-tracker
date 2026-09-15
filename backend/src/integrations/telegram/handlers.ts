@@ -1,5 +1,5 @@
-import { telegramService } from '../services/telegram.service';
-import { userRepository } from '../repositories/userRepository';
+import { telegramService } from '../../services/telegram.service';
+import { telegramBindingRepository } from '../../repositories/telegramBindingRepository';
 
 const helpMessage = `
 🛍️ Shopee Price Tracker Bot

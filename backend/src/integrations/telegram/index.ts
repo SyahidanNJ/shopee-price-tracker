@@ -1,20 +1,23 @@
-import { config } from '../config';
+import { config } from '../../config';
 import { bot } from './bot';
 
 export const initializeTelegram = () => {
-  if (config.telegramBotToken) {
-    if (config.telegramWebhookSecret) {
-      console.log('Starting bot in webhook mode');
-      bot.webhook.listen('/webhook/telegram', {
-        port: config.port,
-        secretToken: config.telegramWebhookSecret
-      });
-    } else {
-      console.log('Starting bot in long polling mode');
-      bot.start();
-    }
+  if (!config.telegramBotToken) {
+    console.log('Telegram bot not configured, skipping');
+    return;
+  }
+
+  if (config.env === 'production') {
+    // Production: webhook mode, handled by Express route POST /webhook/telegram
+    console.log('Telegram bot in webhook mode (use POST /webhook/telegram)');
   } else {
-    console.log('Telegram bot not configured');
+    // Development: long polling
+    console.log('Telegram bot starting in long polling mode');
+    bot.start({
+      onStart: (me) => {
+        console.log(`Telegram bot online: @${me.username}`);
+      }
+    });
   }
 };
 

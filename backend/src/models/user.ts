@@ -2,10 +2,10 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class User extends Model {
-  public id!: string;
-  public email!: string;
-  public passwordHash!: string;
-  public name!: string;
+  declare id: string;
+  declare email: string;
+  declare passwordHash: string;
+  declare name: string;
 }
 
 User.init({

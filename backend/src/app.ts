@@ -6,7 +6,8 @@ import { config } from './config';
 import { testConnection } from './config/database';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
-import { apiRoutes } from '../routes/api';
+import { apiRoutes } from './routes/api';
+import { isSchedulerRunning } from './jobs';
 import telegramWebhook from './integrations/telegram/webhook';
 import pino from 'pino';
 
@@ -35,24 +36,16 @@ app.use('/api/', limiter);
 
 // Health check (outside API prefix)
 app.get('/health', async (req, res) => {
-  try {
-    const dbConnected = await testConnection();
-    res.json({
-      status: 'ok',
-      database: dbConnected ? 'connected' : 'not_connected',
-      telegram: config.telegramBotToken ? 'configured' : 'not_configured',
-      scheduler: 'not_started',
-      timestamp: new Date().toISOString()
-    });
-  } catch {
-    res.json({
-      status: 'ok',
-      database: 'not_connected',
-      telegram: config.telegramBotToken ? 'configured' : 'not_configured',
-      scheduler: 'not_started',
-      timestamp: new Date().toISOString()
-    });
-  }
+  const dbConnected = await testConnection();
+  const healthy = dbConnected;
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ok' : 'degraded',
+    database: dbConnected ? 'connected' : 'not_connected',
+    telegram: config.telegramBotToken ? 'configured' : 'not_configured',
+    scheduler: isSchedulerRunning() ? 'running' : 'not_started',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // API routes

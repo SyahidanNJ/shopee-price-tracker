@@ -2,13 +2,13 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class PriceSnapshot extends Model {
-  public id!: string;
-  public productId!: string;
-  public price!: number | null;
-  public originalPrice!: number | null;
-  public discountPrice!: number | null;
-  public stockStatus!: string | null;
-  public rawData!: any | null;
+  declare id: string;
+  declare productId: string;
+  declare price: number | null;
+  declare originalPrice: number | null;
+  declare discountPrice: number | null;
+  declare stockStatus: string | null;
+  declare rawData: any | null;
 }
 
 PriceSnapshot.init({
@@ -44,6 +44,9 @@ PriceSnapshot.init({
 }, {
   sequelize,
   modelName: 'PriceSnapshot',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: false,
   indexes: [
     { fields: ['productId'] },
     { fields: ['created_at'] }

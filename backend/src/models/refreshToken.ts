@@ -2,11 +2,11 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class RefreshToken extends Model {
-  public id!: string;
-  public userId!: string;
-  public tokenHash!: string;
-  public expiresAt!: Date;
-  public revokedAt!: Date | null;
+  declare id: string;
+  declare userId: string;
+  declare tokenHash: string;
+  declare expiresAt: Date;
+  declare revokedAt: Date | null;
 }
 
 RefreshToken.init({
@@ -33,5 +33,8 @@ RefreshToken.init({
   }
 }, {
   sequelize,
-  modelName: 'RefreshToken'
+  modelName: 'RefreshToken',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: false
 });

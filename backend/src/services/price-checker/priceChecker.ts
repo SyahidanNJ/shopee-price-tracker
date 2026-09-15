@@ -4,6 +4,7 @@ import { config } from '../../config';
 import { shopeeParser, ProductData } from './shopeeParser';
 import { priceSnapshotRepository } from '../../repositories/priceSnapshotRepository';
 import { priceCheckLogRepository } from '../../repositories/priceCheckLogRepository';
+import { productRepository } from '../../repositories/productRepository';
 
 const logger = pino();
 
@@ -34,17 +35,37 @@ export class ShopeePriceChecker implements PriceCheckService {
       const response = await axios.get(url, {
         timeout: this.timeout,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8'
         },
         maxRedirects: 5
       });
 
       const data = shopeeParser.parse(response.data);
 
+      await productRepository.update(productId, { lastCheckedAt: new Date() });
+
       if (data.price === null) {
+        await productRepository.update(productId, { status: 'error' });
         await this.logCheckResult(productId, 'error', 'Price not found', Date.now() - startTime);
         return { success: false, error: 'Price not found in page' };
       }
+
+      const updates: any = {
+        currentPrice: data.price,
+        lastCheckedAt: new Date()
+      };
+
+      if (data.name) updates.name = data.name;
+      if (data.imageUrl) updates.imageUrl = data.imageUrl;
+
+      if (data.stockStatus === 'out_of_stock') {
+        updates.status = 'out_of_stock';
+      } else if (data.stockStatus === 'available') {
+        updates.status = 'active';
+      }
+
+      await productRepository.update(productId, updates);
 
       await priceSnapshotRepository.create({
         productId,
@@ -64,8 +85,17 @@ export class ShopeePriceChecker implements PriceCheckService {
 
     } catch (error) {
       const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
       const message = axiosError.message || 'Unknown error';
-      await this.logCheckResult(productId, 'error', message, Date.now() - startTime);
+
+      if (status === 404) {
+        await productRepository.update(productId, { status: 'not_found', lastCheckedAt: new Date() });
+        await this.logCheckResult(productId, 'not_found', 'HTTP 404', Date.now() - startTime);
+      } else {
+        await productRepository.update(productId, { status: 'error', lastCheckedAt: new Date() });
+        await this.logCheckResult(productId, 'error', message, Date.now() - startTime);
+      }
+
       return { success: false, error: message };
     }
   }

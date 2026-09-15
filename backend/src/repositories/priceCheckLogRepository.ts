@@ -1,4 +1,4 @@
-import { PriceCheckLog } from './priceCheckLog';
+import { PriceCheckLog } from '../models/priceCheckLog';
 
 export const priceCheckLogRepository = {
   create: async (data: any) => {

@@ -15,7 +15,7 @@ export const telegramController = {
     try {
       const binding = await telegramService.createBindingCode(req.user!.userId);
       res.status(201).json({
-        bindingCode: binding.bindingCode,
+        bindingCode: binding!.bindingCode,
         message: 'Use /bind BINDING_CODE in Telegram bot to connect'
       });
     } catch (error: any) {

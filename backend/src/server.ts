@@ -1,4 +1,5 @@
-import { app, config } from './app';
+import { app } from './app';
+import { config } from './config';
 import { initializeScheduler } from './jobs';
 import { initializeTelegram } from './integrations/telegram';
 

@@ -7,15 +7,15 @@ export interface JWTPayload {
 }
 
 export const generateAccessToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, config.jwtAccessSecret!, {
-    expiresIn: config.jwtAccessExpiresIn
-  });
+  return jwt.sign(payload, config.jwtAccessSecret as string, {
+    expiresIn: config.jwtAccessExpiresIn as string
+  } as jwt.SignOptions);
 };
 
 export const generateRefreshToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, config.jwtRefreshSecret!, {
-    expiresIn: config.jwtRefreshExpiresIn
-  });
+  return jwt.sign(payload, config.jwtRefreshSecret as string, {
+    expiresIn: config.jwtRefreshExpiresIn as string
+  } as jwt.SignOptions);
 };
 
 export const verifyToken = (token: string, secret: string): JWTPayload => {

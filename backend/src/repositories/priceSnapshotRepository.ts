@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { PriceSnapshot } from '../models/priceSnapshot';
 
 export const priceSnapshotRepository = {
@@ -17,5 +18,14 @@ export const priceSnapshotRepository = {
       where: { productId },
       order: [['created_at', 'DESC']]
     });
+  },
+
+  findPreviousPrice: async (productId: string): Promise<number | null> => {
+    const snapshots = await PriceSnapshot.findAll({
+      where: { productId, price: { [Op.ne]: null } },
+      order: [['created_at', 'DESC']],
+      limit: 2
+    });
+    return snapshots.length > 1 ? snapshots[1].price : null;
   }
 };

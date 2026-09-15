@@ -2,12 +2,12 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class TelegramBinding extends Model {
-  public id!: string;
-  public userId!: string;
-  public telegramUserId!: string;
-  public telegramUsername!: string | null;
-  public bindingCode!: string;
-  public isActive!: boolean;
+  declare id: string;
+  declare userId: string;
+  declare telegramUserId: string | null;
+  declare telegramUsername: string | null;
+  declare bindingCode: string;
+  declare isActive: boolean;
 }
 
 TelegramBinding.init({
@@ -22,7 +22,7 @@ TelegramBinding.init({
   },
   telegramUserId: {
     type: DataTypes.STRING(50),
-    allowNull: false
+    allowNull: true
   },
   telegramUsername: {
     type: DataTypes.STRING(100),

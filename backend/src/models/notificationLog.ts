@@ -2,15 +2,15 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class NotificationLog extends Model {
-  public id!: string;
-  public userId!: string;
-  public productId!: string;
-  public alertId!: string;
-  public channel!: string;
-  public status!: string;
-  public telegramMessageId!: string | null;
-  public errorMessage!: string | null;
-  public sentAt!: Date;
+  declare id: string;
+  declare userId: string;
+  declare productId: string;
+  declare alertId: string | null;
+  declare channel: string;
+  declare status: string;
+  declare telegramMessageId: string | null;
+  declare errorMessage: string | null;
+  declare sentAt: Date;
 }
 
 NotificationLog.init({
@@ -29,7 +29,7 @@ NotificationLog.init({
   },
   alertId: {
     type: DataTypes.UUID,
-    allowNull: false
+    allowNull: true
   },
   channel: {
     type: DataTypes.STRING(20),
@@ -54,6 +54,9 @@ NotificationLog.init({
 }, {
   sequelize,
   modelName: 'NotificationLog',
+  timestamps: true,
+  createdAt: false,
+  updatedAt: false,
   indexes: [
     { fields: ['userId'] },
     { fields: ['productId'] }

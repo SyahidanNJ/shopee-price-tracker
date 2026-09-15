@@ -1,4 +1,4 @@
-import { NotificationLog } from './notificationLog';
+import { NotificationLog } from '../models/notificationLog';
 
 export const NotificationLogRepository = {
   create: async (data: any) => {

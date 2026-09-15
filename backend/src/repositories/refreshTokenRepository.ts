@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { RefreshToken } from '../models';
 
 export const refreshTokenRepository = {

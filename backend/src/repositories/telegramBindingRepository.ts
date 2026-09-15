@@ -1,4 +1,4 @@
-import { TelegramBinding } from './telegramBinding';
+import { TelegramBinding } from '../models/telegramBinding';
 import { Op } from 'sequelize';
 
 export const telegramBindingRepository = {

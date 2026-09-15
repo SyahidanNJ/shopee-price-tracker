@@ -1,4 +1,4 @@
-import { config } from '../config';
+import { config } from '../../config';
 import { Bot } from 'grammy';
 import { handleStart, handleBind, handleStatus, handleTest, handleHelp } from './handlers';
 

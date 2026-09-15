@@ -2,14 +2,14 @@ import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
 
 export class Alert extends Model {
-  public id!: string;
-  public userId!: string;
-  public productId!: string;
-  public isActive!: boolean;
-  public alertType!: string;
-  public targetPrice!: number | null;
-  public minDropPercentage!: number | null;
-  public cooldownMinutes!: number;
+  declare id: string;
+  declare userId: string;
+  declare productId: string;
+  declare isActive: boolean;
+  declare alertType: string;
+  declare targetPrice: number | null;
+  declare minDropPercentage: number | null;
+  declare cooldownMinutes: number;
 }
 
 const alertTypes = ['any_drop', 'target_price', 'min_drop_percentage'];

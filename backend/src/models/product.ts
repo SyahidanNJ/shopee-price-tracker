@@ -1,7 +1,24 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database';
 
-const Product = sequelize.define('Product', {
+export class Product extends Model {
+  declare id: string;
+  declare userId: string;
+  declare name: string;
+  declare sourceUrl: string;
+  declare normalizedUrl: string;
+  declare shopeeItemId: string | null;
+  declare shopeeShopId: string | null;
+  declare imageUrl: string | null;
+  declare currentPrice: number | null;
+  declare currency: string;
+  declare status: string;
+  declare lastCheckedAt: Date | null;
+  declare lastNotifiedPrice: number | null;
+  declare lastNotifiedAt: Date | null;
+}
+
+Product.init({
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -67,5 +84,3 @@ const Product = sequelize.define('Product', {
     { fields: ['status'] }
   ]
 });
-
-module.exports = Product;

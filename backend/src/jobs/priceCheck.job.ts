@@ -1,9 +1,11 @@
 import pino from 'pino';
 import { config } from '../config';
 import { Product } from '../models/product';
+import { Alert } from '../models/alert';
 import { priceChecker } from '../services/price-checker/priceChecker';
 import { alertRepository } from '../repositories/alertRepository';
 import { priceSnapshotRepository } from '../repositories/priceSnapshotRepository';
+import { notificationJob } from './notification.job';
 
 const logger = pino();
 
@@ -12,13 +14,13 @@ export interface CheckResult {
   success: boolean;
   oldPrice: number | null;
   newPrice: number | null;
-  shouldNotify: boolean;
+  notified: boolean;
 }
 
 export const priceCheckJob = {
   run: async () => {
     const activeProducts = await Product.findAll({
-      where: { status: 'active' }
+      where: { status: ['active', 'out_of_stock'] }
     });
 
     if (activeProducts.length === 0) {
@@ -32,44 +34,78 @@ export const priceCheckJob = {
 
     for (let i = 0; i < activeProducts.length; i++) {
       const product = activeProducts[i];
-      
+
       if (i > 0) {
         await new Promise(resolve => setTimeout(resolve, config.priceCheckDelayMs));
       }
 
-      logger.info(`Checking product ${product.id} (${i + 1}/${activeProducts.length})`);
+      logger.info({ productId: product.id, index: i + 1, total: activeProducts.length }, 'Checking product');
 
       try {
-        const oldSnapshot = await priceSnapshotRepository.findLatestByProductId(product.id);
-        const oldPrice = oldSnapshot?.price || null;
-
         const result = await priceChecker.check(product.id, product.normalizedUrl);
-
         const newPrice = result.success && result.data ? result.data.price : null;
+
+        // Refresh product after price checker updated it
+        await product.reload();
+        const oldPrice = product.currentPrice === newPrice
+          ? (await priceSnapshotRepository.findPreviousPrice(product.id))
+          : product.currentPrice;
+
         const shouldNotify = await shouldSendNotification(product, oldPrice, newPrice);
+
+        let notified = false;
+        if (shouldNotify && newPrice && oldPrice) {
+          const alert = await alertRepository.findByProductId(product.id);
+          if (alert) {
+            try {
+              await notificationJob.send(
+                product.userId,
+                product.id,
+                product.name,
+                oldPrice,
+                newPrice,
+                alert.id
+              );
+
+              await Product.update(
+                { lastNotifiedPrice: newPrice, lastNotifiedAt: new Date() },
+                { where: { id: product.id } }
+              );
+
+              notified = true;
+              logger.info({ productId: product.id, newPrice }, 'Notification sent');
+            } catch (error: any) {
+              logger.error({ productId: product.id, message: error.message }, 'Notification failed');
+            }
+          }
+        }
 
         results.push({
           productId: product.id,
           success: result.success,
           oldPrice,
           newPrice,
-          shouldNotify
+          notified
         });
-
-        logger.info({
-          productId: product.id,
-          oldPrice,
-          newPrice,
-          shouldNotify
-        }, 'Product check completed');
-
       } catch (error: any) {
-        logger.error({
+        logger.error({ productId: product.id, message: error.message }, 'Product check failed');
+        results.push({
           productId: product.id,
-          message: error.message
-        }, 'Product check failed');
+          success: false,
+          oldPrice: null,
+          newPrice: null,
+          notified: false
+        });
       }
     }
+
+    const summary = {
+      total: results.length,
+      success: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      notificationsSent: results.filter(r => r.notified).length
+    };
+    logger.info(summary, 'Scheduler run summary');
 
     return results;
   }
@@ -80,33 +116,30 @@ async function shouldSendNotification(
   oldPrice: number | null,
   newPrice: number | null
 ): Promise<boolean> {
-  // Check 1: Must have valid new price
-  if (!newPrice || oldPrice === null) {
+  if (!newPrice || !oldPrice) {
     return false;
   }
 
-  // Check 2: Price must be lower (never notify on price increase)
   if (newPrice >= oldPrice) {
     return false;
   }
 
-  // Check 3: Cooldown check
+  const alert = await alertRepository.findByProductId(product.id);
+  if (!alert || !alert.isActive) {
+    return false;
+  }
+
+  // Cooldown check
   if (product.lastNotifiedAt) {
-    const cooldownMinutes = config.priceCheckIntervalMinutes || 30;
+    const cooldownMinutes = alert.cooldownMinutes || 360;
     const minutesSinceLast = (Date.now() - product.lastNotifiedAt.getTime()) / 60000;
     if (minutesSinceLast < cooldownMinutes) {
       return false;
     }
   }
 
-  // Check 4: Duplicate prevention (same price as last notified)
+  // Duplicate prevention
   if (product.lastNotifiedPrice === newPrice) {
-    return false;
-  }
-
-  // Check 5: Alert type conditions
-  const alert = await alertRepository.findByProductId(product.id);
-  if (!alert || !alert.isActive) {
     return false;
   }
 
@@ -120,23 +153,9 @@ async function shouldSendNotification(
     return true;
   }
 
-  if (alert.alertType === 'min_drop_percentage' && dropPercentage >= (alert.minDropPercentage || 0)) {
+  if (alert.alertType === 'min_drop_percentage' && dropPercentage >= Number(alert.minDropPercentage || 0)) {
     return true;
   }
 
   return false;
 }
-
-async function updateProductNotified(product: Product, newPrice: number) {
-  await Product.update(
-    {
-      lastNotifiedPrice: newPrice,
-      lastNotifiedAt: new Date()
-    },
-    {
-      where: { id: product.id }
-    }
-  );
-}
-
-export { shouldSendNotification, updateProductNotified };

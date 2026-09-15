@@ -1,41 +1,11 @@
 import { productRepository } from '../repositories/productRepository';
-import { priceSnapshotRepository } from '../repositories/priceSnapshotRepository';
 import { priceChecker } from './price-checker/priceChecker';
-import { updateProductRepository } from '../repositories/productRepository';
-
-export const normalizeShopeeUrl = (url: string): string => {
-  try {
-    const parsed = new URL(url);
-    const path = parsed.pathname;
-    const itemMatch = path.match(/i\/(\d+)/);
-    const shopMatch = path.match(/shopee\.co\.id\/([^/]+)/);
-    
-    if (itemMatch) {
-      return `https://shopee.co.id/i/${itemMatch[1]}`;
-    }
-    if (shopMatch) {
-      return `https://shopee.co.id/${shopMatch[1]}`;
-    }
-    return url;
-  } catch {
-    return url;
-  }
-};
-
-export const extractShopeeIds = (url: string): { itemId?: string; shopId?: string } => {
-  const itemId = url.match(/i\/(\d+)/)?.[1];
-  const shopId = url.match(/shop\/(\d+)/)?.[1];
-  return { itemId, shopId };
-};
-
-export const validateShopeeUrl = (url: string): boolean => {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.includes('shopee.co.id') || parsed.hostname.includes('shopee.com');
-  } catch {
-    return false;
-  }
-};
+import {
+  normalizeShopeeUrl,
+  extractShopeeIds,
+  validateShopeeUrl,
+  resolveShortUrl
+} from './price-checker/urlNormalizer';
 
 export const productService = {
   create: async (userId: string, data: { sourceUrl: string }) => {
@@ -43,8 +13,9 @@ export const productService = {
       throw new Error('Invalid Shopee URL');
     }
 
-    const normalizedUrl = normalizeShopeeUrl(data.sourceUrl);
-    const ids = extractShopeeIds(data.sourceUrl);
+    const resolvedUrl = await resolveShortUrl(data.sourceUrl);
+    const normalizedUrl = normalizeShopeeUrl(resolvedUrl);
+    const ids = extractShopeeIds(resolvedUrl);
 
     const existing = await productRepository.findByNormalizedUrl(userId, normalizedUrl);
     if (existing) {
@@ -61,15 +32,20 @@ export const productService = {
       status: 'active'
     });
 
-    const result = await priceChecker.check(product.id, data.sourceUrl);
-    
+    const result = await priceChecker.check(product.id, normalizedUrl);
+
     let status = 'active';
-    let name = 'Loading...';
+    let name = 'Unknown Product';
     let currentPrice = null;
+    let imageUrl = null;
 
     if (result.success && result.data) {
       name = result.data.name || 'Unknown Product';
       currentPrice = result.data.price;
+      imageUrl = result.data.imageUrl;
+      if (result.data.price === null) {
+        status = 'error';
+      }
       if (result.data.stockStatus === 'out_of_stock') {
         status = 'out_of_stock';
       }
@@ -77,13 +53,15 @@ export const productService = {
       status = 'error';
     }
 
-    await updateProductRepository(product.id, {
+    await productRepository.update(product.id, {
       name,
       currentPrice,
-      status
+      imageUrl,
+      status,
+      lastCheckedAt: new Date()
     });
 
-    return product;
+    return productRepository.findById(product.id);
   },
 
   findAll: async (userId: string) => {
@@ -103,7 +81,7 @@ export const productService = {
     if (!product) {
       throw new Error('Product not found');
     }
-    await updateProductRepository(id, data);
+    await productRepository.update(id, data);
     return productRepository.findById(id);
   },
 
