@@ -7,6 +7,9 @@ export interface ProductData {
   discountPrice: number | null;
   imageUrl: string | null;
   stockStatus: string | null;
+  pageUrl?: string;
+  title?: string;
+  blocked?: boolean;
 }
 
 export interface ShopeeParser {

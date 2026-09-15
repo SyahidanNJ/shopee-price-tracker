@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import pino from 'pino';
 import { config } from '../../config';
 import { shopeeParser, ProductData } from './shopeeParser';
+import { playwrightFallback } from './playwrightFallback';
 import { priceSnapshotRepository } from '../../repositories/priceSnapshotRepository';
 import { priceCheckLogRepository } from '../../repositories/priceCheckLogRepository';
 import { productRepository } from '../../repositories/productRepository';
@@ -43,45 +44,17 @@ export class ShopeePriceChecker implements PriceCheckService {
 
       const data = shopeeParser.parse(response.data);
 
-      await productRepository.update(productId, { lastCheckedAt: new Date() });
-
+      // Fallback ke Playwright jika harga tidak ada di HTML statis
+      // (Shopee render harga via JavaScript)
       if (data.price === null) {
-        await productRepository.update(productId, { status: 'error' });
-        await this.logCheckResult(productId, 'error', 'Price not found', Date.now() - startTime);
-        return { success: false, error: 'Price not found in page' };
-      }
-
-      const updates: any = {
-        currentPrice: data.price,
-        lastCheckedAt: new Date()
-      };
-
-      if (data.name) updates.name = data.name;
-      if (data.imageUrl) updates.imageUrl = data.imageUrl;
-
-      if (data.stockStatus === 'out_of_stock') {
-        updates.status = 'out_of_stock';
-      } else if (data.stockStatus === 'available') {
-        updates.status = 'active';
-      }
-
-      await productRepository.update(productId, updates);
-
-      await priceSnapshotRepository.create({
-        productId,
-        price: data.price,
-        originalPrice: data.originalPrice,
-        discountPrice: data.discountPrice,
-        stockStatus: data.stockStatus,
-        rawData: {
-          name: data.name,
-          imageUrl: data.imageUrl,
-          timestamp: new Date().toISOString()
+        logger.info({ productId }, 'Static parse missing price, trying Playwright fallback');
+        const dynamicData = await playwrightFallback.fetch(url);
+        if (dynamicData && dynamicData.price !== null) {
+          return this.persist(productId, dynamicData, startTime);
         }
-      });
+      }
 
-      await this.logCheckResult(productId, 'success', undefined, Date.now() - startTime);
-      return { success: true, data };
+      return this.persist(productId, data, startTime);
 
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -98,6 +71,55 @@ export class ShopeePriceChecker implements PriceCheckService {
 
       return { success: false, error: message };
     }
+  }
+
+  private async persist(
+    productId: string,
+    data: ProductData,
+    startTime: number
+  ): Promise<PriceCheckResult> {
+    await productRepository.update(productId, { lastCheckedAt: new Date() });
+
+    if (data.price === null) {
+      const reason = data.blocked
+        ? 'Blocked by Shopee (login/anti-bot wall)'
+        : 'Price not found';
+      await productRepository.update(productId, { status: 'error' });
+      await this.logCheckResult(productId, 'error', reason, Date.now() - startTime);
+      return { success: false, error: reason };
+    }
+
+    const updates: any = {
+      currentPrice: data.price,
+      lastCheckedAt: new Date()
+    };
+
+    if (data.name) updates.name = data.name;
+    if (data.imageUrl) updates.imageUrl = data.imageUrl;
+
+    if (data.stockStatus === 'out_of_stock') {
+      updates.status = 'out_of_stock';
+    } else if (data.stockStatus === 'available') {
+      updates.status = 'active';
+    }
+
+    await productRepository.update(productId, updates);
+
+    await priceSnapshotRepository.create({
+      productId,
+      price: data.price,
+      originalPrice: data.originalPrice,
+      discountPrice: data.discountPrice,
+      stockStatus: data.stockStatus,
+      rawData: {
+        name: data.name,
+        imageUrl: data.imageUrl,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    await this.logCheckResult(productId, 'success', undefined, Date.now() - startTime);
+    return { success: true, data };
   }
 
   async checkWithRetry(productId: string, url: string, maxRetries: number = this.retries): Promise<PriceCheckResult> {

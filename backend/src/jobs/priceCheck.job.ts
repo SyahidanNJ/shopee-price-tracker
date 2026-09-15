@@ -111,7 +111,7 @@ export const priceCheckJob = {
   }
 };
 
-async function shouldSendNotification(
+export async function shouldSendNotification(
   product: Product,
   oldPrice: number | null,
   newPrice: number | null

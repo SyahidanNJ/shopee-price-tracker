@@ -85,7 +85,7 @@ export const handleStatus = async (ctx: any) => {
 export const handleTest = async (ctx: any) => {
   const binding = await telegramBindingRepository.findByTelegramUserId(String(ctx.from?.id || ''));
 
-  if (!binding || !binding.isActive) {
+  if (!binding || !binding.isActive || !binding.telegramUserId) {
     await ctx.reply('❌ You are not bound to any account.');
     return;
   }
