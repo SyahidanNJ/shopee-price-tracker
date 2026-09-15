@@ -31,17 +31,13 @@ import {
             }
           </div>
 
-          @if (error) {
-            <p style="color: #d32f2f; margin-bottom: 16px;">{{ error }}</p>
-          }
-
           <div style="display: flex; gap: 8px;">
             <button
               type="submit"
               class="btn btn-primary"
-              [disabled]="form.invalid || loading"
+              [disabled]="form.invalid"
             >
-              {{ loading ? 'Adding...' : 'Add Product' }}
+              Add Product
             </button>
             <button
               type="button"
@@ -58,13 +54,11 @@ import {
 })
 export class AddProductModalComponent {
   form: FormGroup;
-  loading = false;
-  error = '';
-  @Output() closed = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<any>();
 
   constructor(private fb: FormBuilder) {
     this.form = this.fb.group({
-      sourceUrl: ['', [Validators.required, Validators.pattern(/shopee\.co\.id/)]
+      sourceUrl: ['', [Validators.required, Validators.pattern(/shopee\.(co\.id|com)/)]]
     });
   }
 
@@ -74,6 +68,6 @@ export class AddProductModalComponent {
   }
 
   onClose() {
-    this.closed.emit();
+    this.closed.emit(null);
   }
 }

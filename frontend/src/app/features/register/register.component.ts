@@ -106,7 +106,7 @@ export class RegisterComponent {
 
     this.authService.register(this.form.value).subscribe({
       next: (data) => {
-        this.authService.setToken(data.accessToken);
+        this.authService.setTokens(data.accessToken, data.refreshToken);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {

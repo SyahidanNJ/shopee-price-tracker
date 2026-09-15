@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { ProductService, Product, UpdateProductRequest } from '../../core/product.service';
-import { AlertService, UpdateAlertRequest } from '../../core/alert.service';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ProductService, Product } from '../../core/product.service';
+import { AlertService, Alert, UpdateAlertRequest } from '../../core/alert.service';
 import { AlertSettingsComponent } from './alert-settings.component';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [AlertSettingsComponent],
+  imports: [CommonModule, RouterLink, AlertSettingsComponent],
   template: `
     <div class="container">
       @if (loading) {
@@ -17,12 +18,12 @@ import { AlertSettingsComponent } from './alert-settings.component';
       } @else if (error) {
         <div class="card" style="color: #d32f2f;">
           <strong>Error:</strong> {{ error }}
-          <button class="btn btn-secondary" (click)="router.back()" style="margin-top: 16px;">Back</button>
+          <div><button class="btn btn-secondary" (click)="goBack()" style="margin-top: 16px;">Back</button></div>
         </div>
       } @else if (product) {
         <div class="card">
-          <button class="btn btn-secondary" (click)="router.back()" style="margin-bottom: 16px;">← Back</button>
-          
+          <button class="btn btn-secondary" (click)="goBack()" style="margin-bottom: 16px;">&larr; Back</button>
+
           @if (product.imageUrl) {
             <img [src]="product.imageUrl" [alt]="product.name" style="max-width: 200px; border-radius: 8px; margin-bottom: 16px;" />
           }
@@ -33,28 +34,26 @@ import { AlertSettingsComponent } from './alert-settings.component';
           }
 
           <p style="margin: 16px 0;">
-            <strong>Status:</strong> {{ getStatusLabel(product.status) }}
+            <strong>Status:</strong> {{ statusLabel }}
           </p>
 
           @if (product.lastCheckedAt) {
             <p>Last checked: {{ product.lastCheckedAt | date:'medium' }}</p>
           }
 
-          <div style="margin-top: 24px;">
-            <a [href]="product.sourceUrl" target="_blank" class="btn btn-primary">
-              Open in Shopee
-            </a>
-            <button class="btn btn-secondary" (click)="togglePause()" style="margin-left: 8px;">
+          <div style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <a [href]="product.sourceUrl" target="_blank" class="btn btn-primary">Open in Shopee</a>
+            <button class="btn" style="background: #ff9800; color: white;" (click)="togglePause()">
               {{ product.status === 'paused' ? 'Resume' : 'Pause' }}
             </button>
-            <button class="btn" style="background: #f44336; color: white; margin-left: 8px;" (click)="confirmDelete()">
-              Delete
-            </button>
+            <button class="btn" style="background: #f44336; color: white;" (click)="confirmDelete()">Delete</button>
           </div>
 
           <app-alert-settings
-            [productId]="product.id"
-            (onSaved)="handleAlertSave($event)"
+            [alert]="alert"
+            [saving]="savingAlert"
+            [error]="alertError"
+            (saved)="handleAlertSave($event)"
           ></app-alert-settings>
         </div>
       }
@@ -63,8 +62,11 @@ import { AlertSettingsComponent } from './alert-settings.component';
 })
 export class ProductDetailComponent implements OnInit {
   product: Product | null = null;
+  alert: Alert | null = null;
   loading = false;
+  savingAlert = false;
   error = '';
+  alertError = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -73,13 +75,20 @@ export class ProductDetailComponent implements OnInit {
     private router: Router
   ) {}
 
+  get statusLabel(): string {
+    return this.product ? this.productService.getStatusLabel(this.product.status) : '';
+  }
+
+  goBack() {
+    window.history.back();
+  }
+
   ngOnInit() {
     const productId = this.route.snapshot.paramMap.get('id');
     if (!productId) {
       this.error = 'Invalid product ID';
       return;
     }
-
     this.loadProduct(productId);
     this.loadAlert(productId);
   }
@@ -101,54 +110,54 @@ export class ProductDetailComponent implements OnInit {
   loadAlert(productId: string) {
     this.alertService.getByProductId(productId).subscribe({
       next: (alert) => {
-        this.form.patchValue({
-          isActive: alert.isActive,
-          alertType: alert.alertType,
-          targetPrice: alert.targetPrice,
-          minDropPercentage: alert.minDropPercentage,
-          cooldownMinutes: alert.cooldownMinutes
-        });
+        this.alert = alert;
       },
       error: () => {}
     });
   }
 
-  getStatusLabel(status: string): string {
-    return this.productService.getStatusLabel(status);
-  }
-
-  async togglePause() {
+  togglePause() {
     if (!this.product) return;
     const newStatus = this.product.status === 'paused' ? 'active' : 'paused';
-    await this.productService.update(this.product.id, { status: newStatus }).toPromise();
-    this.product.status = newStatus;
+    this.productService.update(this.product.id, { status: newStatus }).subscribe({
+      next: (updated) => {
+        if (this.product) this.product.status = updated.status;
+      }
+    });
   }
 
   confirmDelete() {
-    if (confirm('Are you sure you want to delete this product?')) {
-      this.productService.delete(this.product!.id).subscribe({
+    if (this.product && confirm('Are you sure you want to delete this product?')) {
+      this.productService.delete(this.product.id).subscribe({
         next: () => this.router.navigate(['/dashboard']),
-        error: () => this.error = 'Failed to delete product'
+        error: () => (this.error = 'Failed to delete product')
       });
     }
   }
 
-  async handleAlertSave(data: any) {
+  handleAlertSave(data: any) {
     if (!this.product) return;
+
+    this.savingAlert = true;
+    this.alertError = '';
 
     const request: UpdateAlertRequest = {
       isActive: data.isActive,
       alertType: data.alertType,
-      targetPrice: data.alertType === 'target_price' ? data.targetPrice : null,
-      minDropPercentage: data.alertType === 'min_drop_percentage' ? data.minDropPercentage : null,
-      cooldownMinutes: data.cooldownMinutes
+      targetPrice: data.alertType === 'target_price' ? Number(data.targetPrice) : null,
+      minDropPercentage: data.alertType === 'min_drop_percentage' ? Number(data.minDropPercentage) : null,
+      cooldownMinutes: Number(data.cooldownMinutes) || 360
     };
 
-    try {
-      await this.alertService.update(this.product.id, request).toPromise();
-      this.error = '';
-    } catch (err: any) {
-      this.error = err.error?.error || 'Failed to save alert';
-    }
+    this.alertService.update(this.product.id, request).subscribe({
+      next: (alert) => {
+        this.alert = alert;
+        this.savingAlert = false;
+      },
+      error: (err) => {
+        this.alertError = err.error?.error || 'Failed to save alert';
+        this.savingAlert = false;
+      }
+    });
   }
 }

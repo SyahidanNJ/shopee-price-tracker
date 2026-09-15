@@ -20,6 +20,9 @@ Thumbs.db
 dist/
 build/
 
+# Angular cache
+.angular/
+
 # Logs
 logs/
 *.log

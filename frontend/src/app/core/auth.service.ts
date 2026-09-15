@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface User {
@@ -18,8 +18,8 @@ export interface AuthResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private apiUrl = environment.apiUrl;
-  private userSubject = new BehaviorSubject<User | null>(null);
-  user$ = this.userSubject.asObservable();
+
+  constructor(private http: HttpClient) {}
 
   register(data: { email: string; password: string; name: string }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, data);
@@ -33,19 +33,24 @@ export class AuthService {
     localStorage.setItem('accessToken', token);
   }
 
-  getToken() {
-    return localStorage.getItem('accessToken');
+  setTokens(accessToken: string, refreshToken: string) {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
   }
 
   logout() {
+    this.http.post(`${this.apiUrl}/auth/logout`, {}).subscribe({
+      next: () => this.clearTokens(),
+      error: () => this.clearTokens()
+    });
+  }
+
+  clearTokens() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    this.userSubject.next(null);
   }
 
   getCurrentUser(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/auth/me`).pipe(
-      tap(user => this.userSubject.next(user))
-    );
+    return this.http.get<User>(`${this.apiUrl}/auth/me`);
   }
 }

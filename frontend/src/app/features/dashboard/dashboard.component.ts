@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { ProductService, Product } from '../../core/product.service';
 import { ProductCardComponent } from './product-card.component';
@@ -8,7 +9,7 @@ import { AddProductModalComponent } from './add-product-modal.component';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [ProductCardComponent, AddProductModalComponent],
+  imports: [CommonModule, RouterLink, ProductCardComponent, AddProductModalComponent],
   template: `
     <div class="container">
       <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">

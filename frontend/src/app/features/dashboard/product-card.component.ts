@@ -1,10 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Product, ProductService } from '../../core/product.service';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-product-card',
   standalone: true,
+  imports: [CommonModule],
   template: `
     <div class="card" style="margin-bottom: 16px;">
       <div style="display: flex; gap: 16px;">
@@ -16,9 +18,9 @@ import { Router } from '@angular/router';
           @if (product.currentPrice) {
             <p style="margin: 0; font-weight: bold;">Rp {{ product.currentPrice.toLocaleString() }}</p>
           }
-          <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <span style="font-size: 12px; padding: 2px 8px; background: {{ getStatusColor(product.status) }}; color: white; border-radius: 4px;">
-              {{ getStatusLabel(product.status) }}
+          <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 12px; padding: 2px 8px; background: {{ statusColor }}; color: white; border-radius: 4px;">
+              {{ statusLabel }}
             </span>
             @if (product.lastCheckedAt) {
               <span style="font-size: 12px; color: #666;">
@@ -26,16 +28,12 @@ import { Router } from '@angular/router';
               </span>
             }
           </div>
-          <div style="margin-top: 12px;">
-            <button class="btn" style="background: #2196f3; color: white; margin-right: 8px;" (click)="viewDetails()">
-              View Details
-            </button>
-            <button class="btn" style="background: #ff9800; color: white; margin-right: 8px;" (click)="togglePause()">
+          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn" style="background: #2196f3; color: white;" (click)="viewDetails()">View Details</button>
+            <button class="btn" style="background: #ff9800; color: white;" (click)="togglePause()">
               {{ product.status === 'paused' ? 'Resume' : 'Pause' }}
             </button>
-            <button class="btn" style="background: #f44336; color: white;" (click)="onDelete.emit(product.id)">
-              Delete
-            </button>
+            <button class="btn" style="background: #f44336; color: white;" (click)="delete.emit(product.id)">Delete</button>
           </div>
         </div>
       </div>
@@ -51,21 +49,24 @@ export class ProductCardComponent {
     private router: Router
   ) {}
 
-  getStatusLabel(status: string): string {
-    return this.productService.getStatusLabel(status);
+  get statusLabel(): string {
+    return this.productService.getStatusLabel(this.product.status);
   }
 
-  getStatusColor(status: string): string {
-    return this.productService.getStatusColor(status);
+  get statusColor(): string {
+    return this.productService.getStatusColor(this.product.status);
   }
 
   viewDetails() {
     this.router.navigate(['/product', this.product.id]);
   }
 
-  async togglePause() {
+  togglePause() {
     const newStatus = this.product.status === 'paused' ? 'active' : 'paused';
-    await this.productService.update(this.product.id, { status: newStatus }).toPromise();
-    window.location.reload();
+    this.productService.update(this.product.id, { status: newStatus }).subscribe({
+      next: (updated) => {
+        this.product.status = updated.status;
+      }
+    });
   }
 }

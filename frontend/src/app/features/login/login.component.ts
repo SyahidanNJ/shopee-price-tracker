@@ -6,7 +6,7 @@ import {
   ReactiveFormsModule
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../core/auth.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -90,7 +90,7 @@ export class LoginComponent {
 
     this.authService.login(this.form.value).subscribe({
       next: (data) => {
-        this.authService.setToken(data.accessToken);
+        this.authService.setTokens(data.accessToken, data.refreshToken);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
